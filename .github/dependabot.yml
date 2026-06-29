@@ -1,0 +1,41 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    allow:
+      - dependency-type: "direct"
+    groups:
+      npm-all:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 10
+    assignees: ["n0sc"]
+    labels: ["chore", "dependencies", "npm"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:15"
+      timezone: "America/New_York"
+    groups:
+      ghactions-all:
+        patterns: ["*"]
+    open-pull-requests-limit: 10
+    assignees: ["n0sc"]
+    labels: ["chore", "dependencies", "github-actions"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
