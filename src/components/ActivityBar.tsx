@@ -26,6 +26,8 @@ const EVENT_ICONS: Record<string, string> = {
   'usage': '📊',
   'turn-start': '▶',
   'turn-end': '■',
+  'thread-sent': '↗',
+  'thread-received': '↙',
 }
 
 function formatTokens(n: number): string {
@@ -169,6 +171,18 @@ export function ActivityBar({ sessionId, activity }: ActivityBarProps) {
                   )}
                   {event.kind === 'turn-start' && <span className="turn-marker">user → agent</span>}
                   {event.kind === 'turn-end' && <span className="turn-marker">turn complete</span>}
+                  {event.kind === 'thread-sent' && (
+                    <span className="thread-marker">
+                      ↗ delegated to <strong>{event.threadPeerName}</strong>
+                      {event.preview && <span className="thread-preview"> {event.preview.slice(0, 60)}</span>}
+                    </span>
+                  )}
+                  {event.kind === 'thread-received' && (
+                    <span className="thread-marker">
+                      ↙ result from <strong>{event.threadPeerName}</strong>
+                      {event.preview && <span className="thread-preview"> {event.preview.slice(0, 60)}</span>}
+                    </span>
+                  )}
                 </span>
               </div>
             ))

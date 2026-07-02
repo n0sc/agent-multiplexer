@@ -66,6 +66,8 @@ export interface AgentMuxActions {
   listDir: (path: string) => Promise<DirListing>
   updateSettings: (settings: Partial<AppSettings>) => void
   refine: (text: string, agentType?: string) => Promise<string>
+  /** Delegate a task from one session to another */
+  delegate: (fromSessionId: string, toSessionId: string, task: string) => void
   /** Send a raw message to the backend (used by VoiceInput for transcription) */
   sendRaw: (msg: ClientMessage) => void
 }
@@ -495,6 +497,9 @@ export function useAgentMux(serverUrl: string): {
       listDir,
       updateSettings,
       refine,
+      delegate: (fromSessionId: string, toSessionId: string, task: string) => {
+        send({ type: 'delegate', fromSessionId, toSessionId, task })
+      },
       sendRaw: send,
     },
   }

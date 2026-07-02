@@ -1888,3 +1888,127 @@ background: rgba(255, 255, 255, 0.05);
   color: #6e7681;
   font-size: 11px;
 }
+
+/* Thread delegation events in ActivityBar */
+.activity-event.thread-sent .thread-marker,
+.activity-event.thread-received .thread-marker {
+  color: #d29922;
+  font-size: 11px;
+}
+
+.activity-event.thread-sent .thread-marker strong,
+.activity-event.thread-received .thread-marker strong {
+  color: #79c0ff;
+}
+
+.activity-event.thread-sent .thread-preview,
+.activity-event.thread-received .thread-preview {
+  color: #6e7681;
+}
+
+/* Delegate button in connection bar */
+.delegate-btn {
+  background: none;
+  border: 1px solid #21262d;
+  color: #8b949e;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  margin-left: 4px;
+  transition: all 0.15s;
+}
+
+.delegate-btn:hover {
+  background: #21262d;
+  color: #d29922;
+  border-color: #d29922;
+}
+
+/* Delegation Modal */
+.delegation-modal {
+  max-width: 540px;
+  width: 90vw;
+}
+
+.delegation-from,
+.delegation-to {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.delegation-label {
+  color: #8b949e;
+  font-size: 13px;
+  min-width: 40px;
+}
+
+.delegation-session-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #161b22;
+  border-left: 3px solid;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #c9d1d9;
+}
+
+.delegation-agent-type {
+  color: #6e7681;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.delegation-select {
+  flex: 1;
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #21262d;
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+}
+
+.delegation-select:focus {
+  border-color: #58a6ff;
+}
+
+.delegation-task-input {
+  width: 100%;
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #21262d;
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  margin-top: 4px;
+}
+
+.delegation-task-input:focus {
+  border-color: #58a6ff;
+}
+
+.delegation-empty {
+  color: #6e7681;
+  font-size: 13px;
+  padding: 12px;
+  text-align: center;
+  background: #161b22;
+  border-radius: 5px;
+  margin: 8px 0;
+}
+
+.delegation-hint {
+  color: #484f58;
+  font-size: 11px;
+  margin-top: 4px;
+  text-align: right;
+}

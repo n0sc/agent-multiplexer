@@ -17,6 +17,8 @@ export type AgentEventKind =
   | 'usage'         // Token usage update
   | 'turn-start'    // New user→assistant turn began
   | 'turn-end'      // Turn completed
+  | 'thread-sent'   // Delegation: task handed off to another session
+  | 'thread-received' // Delegation: result received back from another session
 
 export interface AgentEvent {
   /** Unique event ID (for dedup on reconnect) */
@@ -39,6 +41,10 @@ export interface AgentEvent {
   preview?: string
   /** For tool-call: a unique ID to match with the tool-result */
   toolCallId?: string
+  /** For thread-sent/thread-received: the name of the other session */
+  threadPeerName?: string
+  /** For thread-sent/thread-received: the delegation ID linking the pair */
+  threadId?: string
 }
 
 export interface AgentEventMessage {
@@ -166,6 +172,7 @@ export type ServerMessage =
   | DirListingMessage
   | SettingsMessage
   | RefineResultMessage
+  | DelegationResultMessage
 
 // ── Client → Server Messages ────────────────────────────────────
 
@@ -234,6 +241,32 @@ export interface TranscribeMessage {
   mimeType: string
 }
 
+// ── Delegation Messages ─────────────────────────────────────────
+
+export interface DelegateMessage {
+  type: 'delegate'
+  /** Session that initiated the delegation (the "from" session) */
+  fromSessionId: string
+  /** Session that will receive the task (the "to" session) */
+  toSessionId: string
+  /** The task text to send to the target agent */
+  task: string
+}
+
+export interface DelegationResultMessage {
+  type: 'delegation-result'
+  /** Unique delegation ID linking the sent/received pair */
+  delegationId: string
+  /** Session that initiated */
+  fromSessionId: string
+  /** Session that completed the task */
+  toSessionId: string
+  /** The response text from the target agent */
+  result: string
+  /** Error message if the delegation failed */
+  error?: string
+}
+
 export type ClientMessage =
   | CreateSessionMessage
   | InputMessage
@@ -252,6 +285,7 @@ export type ClientMessage =
   | ListDirMessage
   | UpdateSettingsMessage
   | RefineMessage
+  | DelegateMessage
 
 // ── Workspaces ──────────────────────────────────────────────────
 

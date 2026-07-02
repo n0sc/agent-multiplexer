@@ -26,6 +26,7 @@ import type {
   DirEntry,
   AppSettings,
   RefineMessage,
+  DelegateMessage,
   StructuredActivity,
 } from '../src/shared/protocol.js'
 import { AGENT_PRESETS } from '../src/shared/protocol.js'
@@ -528,6 +529,170 @@ class SessionManager {
     })
   }
 
+  // ── Inter-Agent Delegation ─────────────────────────────────────
+
+  private async handleDelegate(ws: WebSocket, msg: DelegateMessage) {
+    const { fromSessionId, toSessionId, task } = msg
+    const fromSession = this.sessions.get(fromSessionId)
+    const toSession = this.sessions.get(toSessionId)
+
+    if (!fromSession || !toSession) {
+      this.sendTo(ws, {
+        type: 'delegation-result',
+        delegationId: '',
+        fromSessionId,
+        toSessionId,
+        result: '',
+        error: 'Source or target session not found',
+      })
+      return
+    }
+
+    if (!toSession.pty) {
+      this.sendTo(ws, {
+        type: 'delegation-result',
+        delegationId: '',
+        fromSessionId,
+        toSessionId,
+        result: '',
+        error: 'Target session has no live PTY',
+      })
+      return
+    }
+
+    const delegationId = `del-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+    const now = new Date().toISOString()
+    const fromName = fromSession.meta.name
+    const toName = toSession.meta.name
+
+    console.log(`[delegate] ${fromName} → ${toName}: ${task.slice(0, 60)}`)
+
+    // Emit thread-sent event on the source session
+    this.broadcast({
+      type: 'agent-event',
+      sessionId: fromSessionId,
+      event: {
+        id: `${delegationId}-sent`,
+        kind: 'thread-sent',
+        timestamp: now,
+        threadPeerName: toName,
+        threadId: delegationId,
+        preview: task.slice(0, 120),
+      },
+    })
+
+    // Emit thread-received event on the target session (it received a task)
+    this.broadcast({
+      type: 'agent-event',
+      sessionId: toSessionId,
+      event: {
+        id: `${delegationId}-recv`,
+        kind: 'thread-sent',
+        timestamp: now,
+        threadPeerName: fromName,
+        threadId: delegationId,
+        preview: task.slice(0, 120),
+      },
+    })
+
+    // Inject the task into the target agent's PTY
+    toSession.pty.write(task + '\r')
+
+    // If the target has an adapter, watch for the next turn-end to capture the result.
+    // If no adapter (shell), we can't detect completion — return immediately with a note.
+    if (!toSession.adapter) {
+      console.log(`[delegate] Target "${toName}" has no adapter — cannot detect completion`)
+      // For shells, wait 5s and grab recent output as a best-effort result
+      setTimeout(() => {
+        const output = toSession.recentOutput.slice(-500)
+        this.completeDelegation(fromSessionId, toSessionId, delegationId, fromName, toName, output, 'No structured adapter — captured raw terminal output')
+      }, 5000)
+      return
+    }
+
+    // Watch the adapter for turn-end with a timeout
+    let settled = false
+    let lastText = ''
+
+    const onEvent = (event: any) => {
+      if (settled) return
+      // Accumulate the last assistant text
+      if (event.kind === 'text') {
+        lastText = event.preview || lastText
+      }
+      // Turn-end means the agent finished its response
+      if (event.kind === 'turn-end') {
+        settled = true
+        cleanup()
+        this.completeDelegation(fromSessionId, toSessionId, delegationId, fromName, toName, lastText || '(empty response)')
+      }
+    }
+
+    // Subscribe to adapter events
+    const originalOnEvent = onEvent
+    toSession.adapter.onEvent(originalOnEvent)
+
+    // Timeout: if no turn-end in 120s, return what we have
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true
+        cleanup()
+        this.completeDelegation(fromSessionId, toSessionId, delegationId, fromName, toName, lastText || '(no response within timeout)', 'Delegation timed out after 120s')
+      }
+    }, 120000)
+
+    function cleanup() {
+      clearTimeout(timeout)
+      // Note: onEvent adds to a Set, we can't remove individual callbacks.
+      // This is fine — the callback becomes a no-op once settled=true.
+    }
+  }
+
+  private completeDelegation(
+    fromSessionId: string,
+    toSessionId: string,
+    delegationId: string,
+    fromName: string,
+    toName: string,
+    result: string,
+    error?: string,
+  ) {
+    const now = new Date().toISOString()
+
+    console.log(`[delegate] ${toName} → ${fromName}: ${error ? 'ERROR' : result.slice(0, 60)}`)
+
+    // Emit thread-received on the source session (it gets the result back)
+    this.broadcast({
+      type: 'agent-event',
+      sessionId: fromSessionId,
+      event: {
+        id: `${delegationId}-result`,
+        kind: 'thread-received',
+        timestamp: now,
+        threadPeerName: toName,
+        threadId: delegationId,
+        preview: result.slice(0, 120),
+      },
+    })
+
+    // Inject the result into the source agent's PTY (as context)
+    const fromSession = this.sessions.get(fromSessionId)
+    if (fromSession?.pty && !error) {
+      const injected = `\r[Delegation result from ${toName}]: ${result}\r`
+      fromSession.pty.write(injected)
+    }
+
+    // Send the structured result message to all clients
+    this.broadcast({
+      type: 'delegation-result',
+      delegationId,
+      fromSessionId,
+      toSessionId,
+      result,
+      error,
+    })
+  }
+
   // ── LLM-Powered Speech Refinement ──────────────────────────────
 
   private async handleRefine(ws: WebSocket, msg: RefineMessage) {
@@ -854,6 +1019,9 @@ Rules:
         break
       case 'refine':
         this.handleRefine(ws, msg)
+        break
+      case 'delegate':
+        this.handleDelegate(ws, msg as DelegateMessage)
         break
     }
   }

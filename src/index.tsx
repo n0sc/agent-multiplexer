@@ -24,6 +24,7 @@ import { SessionList } from './components/SessionList'
 import { TerminalPane } from './components/TerminalPane'
 import { VoiceInput } from './components/VoiceInput'
 import { ActivityBar } from './components/ActivityBar'
+import { DelegationModal } from './components/DelegationModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
 import { SettingsModal } from './components/SettingsModal'
 import { AGENT_PRESETS } from './shared/protocol'
@@ -62,6 +63,7 @@ export function AgentMultiplexer({
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null)
   const [showWorkspaceModal, setShowWorkspaceModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showDelegationModal, setShowDelegationModal] = useState(false)
 
   // Close sidebar on session select (mobile)
   const handleSelect = useCallback((id: string) => {
@@ -208,6 +210,15 @@ export function AgentMultiplexer({
               ●
             </span>
           )}
+          {activeSession && (
+            <button
+              className="delegate-btn"
+              onClick={() => setShowDelegationModal(true)}
+              title="Delegate task to another session"
+            >
+              ↗
+            </button>
+          )}
           <button
             className="settings-gear-btn"
             onClick={() => setShowSettingsModal(true)}
@@ -295,6 +306,15 @@ export function AgentMultiplexer({
           settings={state.settings}
           onSave={actions.updateSettings}
           onClose={() => setShowSettingsModal(false)}
+        />
+      )}
+
+      {showDelegationModal && activeSession && (
+        <DelegationModal
+          fromSession={activeSession}
+          sessions={state.sessions}
+          onDelegate={actions.delegate}
+          onClose={() => setShowDelegationModal(false)}
         />
       )}
     </div>
