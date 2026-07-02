@@ -176,6 +176,22 @@ export type ServerMessage =
 
 // ── Client → Server Messages ────────────────────────────────────
 
+/** Runtime overrides applied at session launch, translated to agent-specific CLI flags */
+export interface SessionOverrides {
+  /** Model override (e.g. 'claude-sonnet-4', 'anthropic/claude-sonnet-4') */
+  model?: string
+  /** Comma-separated toolsets/tools to enable */
+  tools?: string
+  /** Comma-separated skills to preload (Hermes only) */
+  skills?: string
+  /** Permission mode: 'default' | 'acceptEdits' | 'auto' (Claude) | 'yolo' (Hermes) */
+  permissionMode?: string
+  /** Provider override (Hermes only) */
+  provider?: string
+  /** Max tool-calling turns (Hermes only) */
+  maxTurns?: number
+}
+
 export interface CreateSessionMessage {
   type: 'create-session'
   name: string
@@ -189,6 +205,8 @@ export interface CreateSessionMessage {
   agentType?: string
   /** LLM instructions / system prompt (agent-type-specific injection) */
   instructions?: string
+  /** Runtime overrides (model, tools, skills, permissions) */
+  overrides?: SessionOverrides
 }
 
 export interface InputMessage {

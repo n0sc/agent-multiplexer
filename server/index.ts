@@ -27,6 +27,7 @@ import type {
   AppSettings,
   RefineMessage,
   DelegateMessage,
+  SessionOverrides,
   StructuredActivity,
 } from '../src/shared/protocol.js'
 import { AGENT_PRESETS } from '../src/shared/protocol.js'
@@ -205,6 +206,7 @@ class SessionManager {
     cwd?: string
     agentType?: string
     instructions?: string
+    overrides?: SessionOverrides
   }): SessionMeta {
     const id = randomUUID().slice(0, 8)
     const presetKey = opts.agentType || this.guessAgentType(opts.command)
@@ -226,6 +228,11 @@ class SessionManager {
     if (opts.command === 'bash' && !opts.args) {
       command = resolvedShell
       args = ['-l']  // -l = login shell
+    }
+
+    // ── Apply runtime overrides as agent-specific CLI flags ──────
+    if (opts.overrides) {
+      args = [...args, ...this.overridesToArgs(presetKey, opts.overrides)]
     }
 
     // ── Inject LLM instructions based on agent type ──────────────
@@ -894,6 +901,40 @@ Rules:
       this.broadcastSessionList()
       this.persistState()
     }
+  }
+
+  // ── Override → CLI Flag Translation ─────────────────────────────
+
+  private overridesToArgs(agentType: string, ov: SessionOverrides): string[] {
+    const args: string[] = []
+
+    switch (agentType) {
+      case 'claude':
+        if (ov.model) args.push('--model', ov.model)
+        if (ov.tools) args.push('--allowedTools', ...ov.tools.split(',').map(s => s.trim()))
+        if (ov.permissionMode) {
+          // Claude: default | acceptEdits | auto | bypassPermissions
+          if (ov.permissionMode === 'yolo' || ov.permissionMode === 'bypassPermissions') {
+            args.push('--dangerously-skip-permissions')
+          } else {
+            args.push('--permission-mode', ov.permissionMode)
+          }
+        }
+        break
+
+      case 'hermes':
+        if (ov.model) args.push('-m', ov.model)
+        if (ov.provider) args.push('--provider', ov.provider)
+        if (ov.tools) args.push('-t', ov.tools)
+        if (ov.skills) args.push('-s', ov.skills)
+        if (ov.maxTurns) args.push('--max-turns', String(ov.maxTurns))
+        if (ov.permissionMode === 'yolo') args.push('--yolo')
+        if (ov.permissionMode === 'safe') args.push('--safe-mode')
+        break
+      // shell: no overrides applicable
+    }
+
+    return args
   }
 
   // ── Adapter Factory ────────────────────────────────────────────

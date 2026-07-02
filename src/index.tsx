@@ -25,10 +25,11 @@ import { TerminalPane } from './components/TerminalPane'
 import { VoiceInput } from './components/VoiceInput'
 import { ActivityBar } from './components/ActivityBar'
 import { DelegationModal } from './components/DelegationModal'
+import { LaunchDialog } from './components/LaunchDialog'
 import { WorkspaceModal } from './components/WorkspaceModal'
 import { SettingsModal } from './components/SettingsModal'
 import { AGENT_PRESETS } from './shared/protocol'
-import type { Workspace } from './shared/protocol'
+import type { Workspace, SessionOverrides } from './shared/protocol'
 import './styles.css'
 
 export interface AgentMultiplexerProps {
@@ -64,6 +65,7 @@ export function AgentMultiplexer({
   const [showWorkspaceModal, setShowWorkspaceModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showDelegationModal, setShowDelegationModal] = useState(false)
+  const [launchingWorkspace, setLaunchingWorkspace] = useState<Workspace | null>(null)
 
   // Close sidebar on session select (mobile)
   const handleSelect = useCallback((id: string) => {
@@ -84,6 +86,10 @@ export function AgentMultiplexer({
   }, [actions, state.sessions.length])
 
   const handleLaunchWorkspace = useCallback((ws: Workspace) => {
+    setLaunchingWorkspace(ws)
+  }, [])
+
+  const handleLaunchWithOverrides = useCallback((ws: Workspace, overrides: SessionOverrides) => {
     const preset = AGENT_PRESETS[ws.agentType]
     if (!preset) return
 
@@ -94,6 +100,7 @@ export function AgentMultiplexer({
       cwd: ws.cwd,
       agentType: ws.agentType,
       instructions: ws.instructions,
+      overrides,
     })
     setSidebarOpen(false)
   }, [actions])
@@ -315,6 +322,14 @@ export function AgentMultiplexer({
           sessions={state.sessions}
           onDelegate={actions.delegate}
           onClose={() => setShowDelegationModal(false)}
+        />
+      )}
+
+      {launchingWorkspace && (
+        <LaunchDialog
+          workspace={launchingWorkspace}
+          onLaunch={(overrides) => handleLaunchWithOverrides(launchingWorkspace, overrides)}
+          onClose={() => setLaunchingWorkspace(null)}
         />
       )}
     </div>

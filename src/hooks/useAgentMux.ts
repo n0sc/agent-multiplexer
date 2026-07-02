@@ -16,6 +16,7 @@ import type {
   DirEntry,
   AppSettings,
   AgentEvent,
+  SessionOverrides,
 } from '../shared/protocol'
 
 export interface AgentMuxState {
@@ -49,6 +50,7 @@ export interface AgentMuxActions {
     cwd?: string
     agentType?: string
     instructions?: string
+    overrides?: SessionOverrides
   }) => void
   sendInput: (sessionId: string, data: string) => void
   resizeSession: (sessionId: string, cols: number, rows: number) => void
